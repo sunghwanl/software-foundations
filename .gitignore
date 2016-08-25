@@ -1,0 +1,19 @@
+# temp files
+*.aux
+
+# emacs
+*~
+\#*#
+
+# htmls
+*.html
+*.js
+*.map
+*.css
+*.jpg
+*.gif
+
+# coq objectives
+*.vo
+*.glob
+
