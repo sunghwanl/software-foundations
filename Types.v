@@ -183,7 +183,9 @@ Hint Unfold stuck.
 Example some_term_is_stuck :
   exists t, stuck t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  exists (tsucc ttrue). unfold stuck. unfold step_normal_form. unfold not.
+  split; intros; solve by inversion 3.
+Qed.
 (** [] *)
 
 (** However, although values and normal forms are not the same in this
@@ -195,7 +197,13 @@ Proof.
 Lemma value_is_nf : forall t,
   value t -> step_normal_form t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold step_normal_form. unfold not. intros.
+  inversion H.
+  - inversion H1; subst; try solve by inversion 3.
+  - induction H1; try solve by inversion 2.
+    + apply IHnvalue. auto.
+      inversion H0. inversion H2. eauto.
+Qed.
 
 (** (Hint: You will reach a point in this proof where you need to
     use an induction to reason about a term that is known to be a
@@ -213,7 +221,20 @@ Proof.
 Theorem step_deterministic:
   deterministic step.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  unfold deterministic. intros x y1 y2 H1 H2.
+  generalize dependent y2.
+  induction H1; intros y2 H2; inversion H2; subst;
+  try solve by inversion...
+  - apply IHstep in H5. rewrite H5...
+  - apply IHstep in H0. rewrite H0...
+  - exfalso. eapply or_intror in H. apply value_is_nf in H. inversion H1...
+  - exfalso. eapply or_intror in H0. apply value_is_nf in H0. inversion H1...
+  - apply IHstep in H0. rewrite H0...
+  - exfalso. eapply or_intror in H. apply value_is_nf in H. inversion H1...
+  - exfalso. eapply or_intror in H0. apply value_is_nf in H0. inversion H1...
+  - apply IHstep in H0. rewrite H0...
+Qed.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -320,7 +341,8 @@ Example succ_hastype_nat__hastype_nat : forall t,
   |- tsucc t \in TNat ->
   |- t \in TNat.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. inversion H. auto.
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -332,7 +354,7 @@ Proof.
 
 Lemma bool_canonical : forall t,
   |- t \in TBool -> value t -> bvalue t.
-Proof.
+Proof.  
   intros t HT HV.
   inversion HV; auto.
   induction H; inversion HT; auto.
@@ -379,7 +401,23 @@ Proof with auto.
     + (* t1 can take a step *)
       inversion H as [t1' H1].
       exists (tif t1' t2 t3)...
-  (* FILL IN HERE *) Admitted.
+  - inversion IHHT; subst; clear IHHT.
+    + left. apply (nat_canonical t1 HT) in H...
+    + right. inversion H as [t1' H1].
+      exists (tsucc t1')...
+  - inversion IHHT; subst; clear IHHT.
+    + right. apply (nat_canonical t1 HT) in H.
+      inversion H.
+      * { exists tzero... }
+      * { exists t... }
+    + right. inversion H as [t1' H1]. exists (tpred t1')...
+  - inversion IHHT; clear IHHT.
+    + right. apply (nat_canonical t1 HT) in H.
+      inversion H.
+      * { exists ttrue... }
+      * { exists tfalse... }
+    + right. inversion H as [t1' H1]. exists (tiszero t1')...
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (finish_progress_informal)  *)
@@ -457,8 +495,13 @@ Proof with auto.
       + (* ST_IFTrue *) assumption.
       + (* ST_IfFalse *) assumption.
       + (* ST_If *) apply T_If; try assumption.
-        apply IHHT1; assumption.
-    (* FILL IN HERE *) Admitted.
+                    apply IHHT1; assumption.
+    - inversion HE; subst; clear HE.
+      apply IHHT in H0...
+    - inversion HE; subst; clear HE...
+      inversion HT; subst; clear HT...
+    - inversion HE; subst; clear HE...
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (finish_preservation_informal)  *)
@@ -504,7 +547,12 @@ Theorem preservation' : forall t t' T,
   t ==> t' ->
   |- t' \in T.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  intros t t' T HT HE.
+  generalize dependent T.
+  induction HE; intros T HT;
+  inversion HT; subst; clear HT...
+  - inversion H1...
+Qed.
 (** [] *)
 
 (** The preservation theorem is often called _subject reduction_,
@@ -529,7 +577,7 @@ Corollary soundness : forall t t' T,
 Proof.
   intros t t' T HT P. induction P; intros [R S].
   destruct (progress x T HT); auto.
-  apply IHP.  apply (preservation x y T HT H).
+  apply IHP. apply (preservation x y T HT H).
   unfold stuck. split; auto.   Qed.
 
 (* ################################################################# *)
@@ -620,8 +668,8 @@ Theorem normalize_ex : exists e',
   (AMult (ANum 3) (AMult (ANum 2) (ANum 1))) / empty_state
   ==>a* e'.
 Proof.
-  (* FILL IN HERE *) Admitted.
-
+  eapply ex_intro. normalize.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, optional (normalize_ex')  *)
@@ -631,7 +679,8 @@ Theorem normalize_ex' : exists e',
   (AMult (ANum 3) (AMult (ANum 2) (ANum 1))) / empty_state
   ==>a* e'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  eapply ex_intro. normalize.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -645,7 +694,7 @@ Proof.
     not, give a counter-example.  (You do not need to prove your
     counter-example in Coq, but feel free to do so.)
 
-    (* FILL IN HERE *)
+    tif ttrue tzero ttrue
 [] *)
 
 (** **** Exercise: 2 stars (variation1)  *)
@@ -660,11 +709,11 @@ Proof.
    else "becomes false." If a property becomes false, give a
    counterexample.
       - Determinism of [step]
-
+        true
       - Progress
-
+        false
       - Preservation
-
+        true
 [] *)
 
 (** **** Exercise: 2 stars (variation2)  *)
@@ -676,6 +725,7 @@ Proof.
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
 
+   nondeterministic, progressive, preservative.
 [] *)
 
 (** **** Exercise: 2 stars, optional (variation3)  *)
@@ -688,6 +738,7 @@ Proof.
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
 
+   nondeterministic, progressive, preservative
 [] *)
 
 (** **** Exercise: 2 stars, optional (variation4)  *)
