@@ -382,15 +382,50 @@ where "'[' x ':=' s ']' t" := (subst x s t).
 Inductive substi (s:tm) (x:id) : tm -> tm -> Prop :=
   | s_var1 :
       substi s x (tvar x) s
-  (* FILL IN HERE *)
-.
+  | s_var2 :
+      forall y, x <> y -> substi s x (tvar y) (tvar y)
+  | s_abs1 :
+      forall T t1, substi s x (tabs x T t1) (tabs x T t1)
+  | s_abs2 :
+      forall y T t1 t1',
+        x <> y ->
+        substi s x t1 t1' ->
+        substi s x (tabs y T t1) (tabs y T t1')
+  | s_app :
+      forall t1 t2 t1' t2',
+        substi s x t1 t1' ->
+        substi s x t2 t2' ->
+        substi s x (tapp t1 t2) (tapp t1' t2')
+  | s_true :
+      substi s x ttrue ttrue
+  | s_false :
+      substi s x tfalse tfalse
+  | s_if :
+      forall t1 t2 t3 t1' t2' t3',
+        substi s x t1 t1' ->
+        substi s x t2 t2' ->
+        substi s x t3 t3' ->
+        substi s x (tif t1 t2 t3) (tif t1' t2' t3').
 
 Hint Constructors substi.
 
 Theorem substi_correct : forall s x t t',
   [x:=s]t = t' <-> substi s x t t'.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof with auto.
+  intros s x t t'. split.
+  - generalize dependent t'.
+    induction t; intros t' H; simpl in H; rewrite <- H; auto;
+    destruct (beq_id x i) eqn:Heq;
+    try (rewrite beq_id_true_iff in Heq; rewrite Heq; auto);
+    try (rewrite beq_id_false_iff in Heq; auto).
+  - intros H.
+    induction H; simpl; auto;
+    try (rewrite <- beq_id_refl; auto);
+    try (rewrite <- beq_id_false_iff in H; rewrite H; auto).
+    + rewrite IHsubsti...
+    + rewrite IHsubsti1. rewrite IHsubsti2...
+    + rewrite IHsubsti1. rewrite IHsubsti2. rewrite IHsubsti3...
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -578,13 +613,17 @@ Lemma step_example5 :
        (tapp (tapp idBBBB idBB) idB)
   ==>* idB.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  eapply multi_step. auto. simpl.
+  eapply multi_step. auto. auto.
+Qed.
 
 Lemma step_example5_with_normalize :
        (tapp (tapp idBBBB idBB) idB)
   ==>* idB.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  eapply multi_step. auto. simpl.
+  eapply multi_step. auto. auto.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -719,13 +758,21 @@ Example typing_example_2_full :
           (tapp (tvar y) (tapp (tvar y) (tvar x))))) \in
     (TArrow TBool (TArrow (TArrow TBool TBool) TBool)).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply T_Abs. apply T_Abs.
+  apply (T_App TBool TBool).
+  - apply T_Var. rewrite update_eq. reflexivity.
+  - apply (T_App TBool TBool).
+    + apply T_Var. rewrite update_eq. reflexivity.
+    + apply T_Var. rewrite update_neq.
+      * rewrite update_eq. reflexivity.
+      * intro contra. inversion contra.
+Qed.  
 (** [] *)
 
 (** **** Exercise: 2 stars (typing_example_3)  *)
 (** Formally prove the following typing derivation holds: *)
 (** 
-       empty |- \x:Bool->B. \y:Bool->Bool. \z:Bool.
+       empty |- \x:Bool->Bool. \y:Bool->Bool. \z:Bool.
                    y (x z)
              \in T.
 *)
@@ -738,8 +785,19 @@ Example typing_example_3 :
             (tabs z TBool
                (tapp (tvar y) (tapp (tvar x) (tvar z)))))) \in
       T.
-Proof with auto.
-  (* FILL IN HERE *) Admitted.
+Proof with auto using update_eq.
+  exists (TArrow (TArrow TBool TBool)
+             (TArrow (TArrow TBool TBool) (TArrow TBool TBool))).
+  repeat apply T_Abs.
+  eapply T_App.
+  - apply T_Var. rewrite update_neq...
+    intro contra. inversion contra.
+  - eapply T_App.
+    + apply T_Var. rewrite update_neq. rewrite update_neq...
+      intros contra. inversion contra.
+      intros contra. inversion contra.
+    + apply T_Var...
+Qed.
 (** [] *)
 
 (** We can also show that terms are _not_ typable.  For example, let's
@@ -782,7 +840,20 @@ Example typing_nonexample_3 :
              (tapp (tvar x) (tvar x))) \in
           T).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros H.
+  inversion H as [S H0].
+  inversion H0 as [T H1]. clear H H0.
+  inversion H1. subst. clear H1.
+  inversion H5. subst. clear H5.
+  inversion H4. subst. clear H4.
+  rewrite update_eq in H1.
+  inversion H1. subst. clear H1.
+  inversion H2. subst. clear H2.
+  rewrite update_eq in H1.
+  inversion H1. clear H1.
+  induction T11; try inversion H0.
+  - rewrite H2 in H1. apply IHT11_1 in H1. assumption.
+Qed.
 (** [] *)
 
 End STLC.

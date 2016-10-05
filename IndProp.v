@@ -1929,6 +1929,22 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma app_one_injective: forall X (l1 l2: list X) (x y: X),
+                           l1 ++ [x] = l2 ++ [y] ->
+                           x = y /\ l1 = l2.
+Proof.
+  intros.
+  generalize dependent l2.
+  induction l1; intros.
+  - destruct l2 as [| x2' l2']; inversion H; subst.
+    + split; reflexivity.
+    + destruct l2' as [| x2'' l2'']; inversion H.
+  - destruct l2 as [| x2' l2']; inversion H; subst.
+    + destruct l1 as [| x1' l1']; inversion H2.
+    + apply IHl1 in H2. destruct H2 as [Hx Hl].
+      subst x l1. split; reflexivity.
+Qed.
+
 Theorem pal_conv : forall (X : Type) (l : list X),
                      l = rev l -> pal l.
 Proof.
@@ -1938,27 +1954,8 @@ Proof.
   - intros x _. apply pal1.
   - intros l0 x y H H'.
     simpl in H'.
-    assert (Happ1: forall l1 l2, l1 ++ [y] = l2 ++ [x] -> x = y /\ l1 = l2).
-    { induction l1 as [| x' l1' IH].
-      - simpl. destruct l2 as [| y' l2'].
-        + simpl. intros H''. inversion H''.
-          split. reflexivity. reflexivity.
-        + simpl. intros H''. inversion H''.
-          destruct l2' as [| y'' l2''].
-          * simpl in H2. inversion H2.
-          * simpl in H2. inversion H2.
-      - intros l2 H''. destruct l2 as [| y' l2'].
-        + simpl in H''. inversion H''.
-          destruct l1' as [| x'' l1''].
-          * inversion H2.
-          * inversion H2.
-        + simpl in H''. inversion H''. apply IH in H2.
-          destruct H2 as [H2 H3].
-          split.
-          * apply H2.
-          * rewrite -> H3. reflexivity. }
     replace (x :: l0 ++ [y]) with ((x :: l0) ++ [y]) in H'.
-    apply Happ1 in H'.
+    apply app_one_injective in H'.
     destruct H' as [H1 H2].
     rewrite -> H1. apply pal2. apply H.
     rewrite rev_cons in H2. inversion H2.
@@ -2033,7 +2030,7 @@ Proof.
       apply H1.
       intros x0 H. apply H2.
       simpl. right. apply H.
-Qed.      
+Qed.
 (** [] *)
 
 (** **** Exercise: 5 stars, advanced, optional (filter_challenge_2)  *)
